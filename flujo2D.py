@@ -4,6 +4,7 @@ import pygame as pg
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import time
+import math
 
 
 #Si se pinta el fondo con colores o no
@@ -17,7 +18,6 @@ PINTAR_GRILLA = True
 
 #Al ponerlo en True, en vez de pintar todo el eje, solo pone triángulos blancos en los enteros
 EJES_CON_TRIANGULOS = False
-
 
 
 # Hace más suave los colores. Con 0 queda todo negro.
@@ -180,7 +180,11 @@ class App:
                 datos[iter+4] = actual + 1
                 datos[iter+5] = actual + SEPARACION_FONDO + 1
                 iter = iter + 6
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, datos.nbytes, datos, GL_STATIC_DRAW)        
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, datos.nbytes, datos, GL_STATIC_DRAW)
+
+        self.camara_x = 0
+        self.camara_y = 0
+        self.escala = ESCALA 
 
 
 
@@ -219,7 +223,7 @@ class App:
     def pintar_fondo(self, t):
 
         if PINTAR_FONDO:
-            dx, dy = flujo_funcion(ESCALA*self.datos_fondo[:,0], ESCALA*self.datos_fondo[:,1], t)
+            dx, dy = flujo_funcion(self.escala*self.datos_fondo[:,0] + self.camara_x, self.escala*self.datos_fondo[:,1] + self.camara_y, t)
             rojo, verde, azul = funcion_color(dx, dy)
             self.datos_fondo[:,3] = rojo
             self.datos_fondo[:,4] = verde
@@ -231,7 +235,7 @@ class App:
 
     def ejes(self):
         if EJES_CON_TRIANGULOS:
-            for i in range(0,np.floor(ESCALA)):
+            for i in range(0,np.floor(self.escala)):
                 positions1 = triangulito(i/ESCALA,0,0.01)
                 positions2 = triangulito(-i/ESCALA,0,0.01)
                 positions3 = triangulito(0,i/ESCALA,0.01)
@@ -241,28 +245,30 @@ class App:
                 glDrawArrays(GL_TRIANGLES, 0, 12)
         else:
             glUseProgram(self.shaderT)
-            colorCentro = 1
+            colorCentro = 0.85
             color = 0.5
             lineas = np.array([
-            [-1,0,0,colorCentro,colorCentro,colorCentro],
-            [1,0,0,colorCentro,colorCentro,colorCentro],
-            [0,-1,0,colorCentro,colorCentro,colorCentro],
-            [0,1,0,colorCentro,colorCentro,colorCentro]], dtype=np.float32)
+            [-1,-self.camara_y/self.escala,0,colorCentro,colorCentro,colorCentro],
+            [1,-self.camara_y/self.escala,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala,-1,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala,1,0,colorCentro,colorCentro,colorCentro]], dtype=np.float32)
             glLineWidth(2)
             glBufferData(GL_ARRAY_BUFFER, lineas.nbytes, lineas, GL_STATIC_DRAW)
             glDrawArrays(GL_LINES,0,4)
             if PINTAR_GRILLA:
-                for i in range(1,np.floor(ESCALA)):
-                    d = i/ESCALA
+                ancho = math.floor(np.log10(self.escala/2))
+                escalaEjes = self.escala/(10**ancho)
+                for i in range(0,math.ceil(escalaEjes)+1):
+                    d = i/escalaEjes
                     lineas = np.array([
-                    [-1,d,0,color,color,color],
-                    [1,d,0,color,color,color],
-                    [-1,-d,0,color,color,color],
-                    [1,-d,0,color,color,color],
-                    [d,-1,0,color,color,color],
-                    [d,1,0,color,color,color],
-                    [-d,-1,0,color,color,color],
-                    [-d,1,0,color,color,color]], dtype=np.float32)
+                    [-1,d- (self.camara_y/(10**ancho) - np.floor(self.camara_y/(10**ancho)))/(self.escala/(10**ancho)), 0,color,color,color],
+                    [1,d- (self.camara_y/(10**ancho) - np.floor(self.camara_y/(10**ancho)))/(self.escala/(10**ancho)), 0,color,color,color],
+                    [-1,-d- (self.camara_y/(10**ancho) - np.floor(self.camara_y/(10**ancho)))/(self.escala/(10**ancho)), 0,color,color,color],
+                    [1,-d- (self.camara_y/(10**ancho) - np.floor(self.camara_y/(10**ancho)))/(self.escala/(10**ancho)), 0,color,color,color],
+                    [d - (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),-1,0,color,color,color],
+                    [d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),1,0,color,color,color],
+                    [-d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),-1,0,color,color,color],
+                    [-d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),1,0,color,color,color]], dtype=np.float32)
                     glLineWidth(1)
                     glBufferData(GL_ARRAY_BUFFER, lineas.nbytes, lineas, GL_STATIC_DRAW)
                     glDrawArrays(GL_LINES,0,8)
@@ -283,9 +289,47 @@ class App:
         timerfps = tiempo0
         fps = 0
         running = True
+        mov_x = 0
+        mov_y = 0
         while running:
             tiempo = time.time()
             deltaT = tiempo - tiempoViejo
+
+            for event in pg.event.get():
+                if (event.type == pg.QUIT):
+                    running = False
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_a:
+                        mov_x = mov_x - 1
+                    if event.key == pg.K_d:
+                        mov_x = mov_x + 1
+                    if event.key == pg.K_s:
+                        mov_y = mov_y - 1
+                    if event.key == pg.K_w:
+                        mov_y = mov_y + 1
+
+                    if event.key == pg.K_c:
+                        self.camara_x = 0
+                        self.camara_y = 0
+                elif event.type == pg.KEYUP:
+                    if event.key == pg.K_a:
+                        mov_x = mov_x + 1
+                    if event.key == pg.K_d:
+                        mov_x = mov_x - 1
+                    if event.key == pg.K_s:
+                        mov_y = mov_y + 1
+                    if event.key == pg.K_w:
+                        mov_y = mov_y - 1
+                elif event.type == pg.MOUSEWHEEL:
+                    self.escala = self.escala*(1-event.y/8)
+
+
+            #movimiento
+            if mov_x != 0:
+                self.camara_x = self.camara_x + mov_x*self.escala*deltaT/2
+            if mov_y != 0:
+                self.camara_y = self.camara_y + mov_y*self.escala*deltaT/2
+
             glClear(GL_COLOR_BUFFER_BIT)
 
             self.pintar_fondo(tiempo - tiempo0)
@@ -293,11 +337,12 @@ class App:
                 self.ejes()
 
             self.x , self.y = paso(self.x, self.y, tiempo - tiempo0, deltaT, met=METODO_NUMERICO)
-            positions = circulo(self.x/ESCALA, self.y/ESCALA, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
+
+            positions = circulo((self.x-self.camara_x)/self.escala, (self.y - self.camara_y)/self.escala, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
 
-            positions = circunferencia(self.x/ESCALA, self.y/ESCALA, 0.015, 0, 0, 0, RES_CIRC)
+            positions = circunferencia((self.x-self.camara_x)/self.escala, (self.y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glLineWidth(1.5)
             glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC)
@@ -306,13 +351,11 @@ class App:
             if time.time() - timerfps < 1:
                 fps = fps + 1
             else:
-                pg.display.set_caption("Frames por segundo: " + str(fps))
+                pg.display.set_caption("Frames por segundo: " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
                 timerfps = time.time()
                 fps = 0
 
-            for event in pg.event.get():
-                if (event.type == pg.QUIT):
-                    running = False
+            
 
             tiempoViejo = tiempo
 
