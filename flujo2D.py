@@ -23,19 +23,28 @@ EJES_CON_TRIANGULOS = False
 # Hace más suave los colores. Con 0 queda todo negro.
 ATENUACION_COLOR = 1
 
-#Lo que se ve en la ventana es  -ESCALA < x < ESCALA , -ESCALA < y < ESCALA
+#Escala inicial
 ESCALA = 5
 
 #Cantidad de triángulos en los que se descomponen los círculos
 RES_CIRC = 30
 
-#Posición inicial
-X0 = 0
-Y0 = 0
+#Posiciones iniciales
+def posiciones_iniciales():
+    x = []
+    y = []
+    for i in range(-4, 5):
+        for j in range(-4, 5):
+            x.append(i)
+            y.append(j)
+    return x,y
+
+#Cantidad de puntos que se pueden agregar haciendo click
+PUNTOS_AGREGAR = 1000
 
 #Parámetros de Van Der Pol
 MU = 1
-A = 1
+A = 3
 OMEGA = 3
 
 
@@ -86,10 +95,13 @@ def paso(x, y, t, deltaT, met="SP"):
         def func(y,t):
             x1, y1 = flujo_funcion(y[0],y[1], t)
             return [x1,y1]
-        y0 = [x,y]
-        tiempos = [t, t + deltaT]
-        sol = odeint(func, y0, tiempos)
-        return sol[1,0], sol[1,1]
+        for i in range(x.size):    
+            y0 = [x[i],y[i]]
+            tiempos = [t, t + deltaT]
+            sol = odeint(func, y0, tiempos)
+            x[i] = sol[1,0]
+            y[i] = sol[1,1]
+        return x,y
 
 #Acá se elige el método numérico que se usa, de entre las opciones de la función "paso"
 METODO_NUMERICO = "SP"
@@ -158,8 +170,13 @@ class App:
         self.initialize_pygame()
         self.initialize_opengl()
         
-        self.x = X0
-        self.y = Y0
+        x, y = posiciones_iniciales()
+        self.cant_puntos = len(x)
+        for i in range(PUNTOS_AGREGAR):
+            x.append(0)
+            y.append(0)
+        self.x = np.array(x, dtype = np.float32)
+        self.y = np.array(y, dtype = np.float32)
 
         #Estructura para el fondo
         grilla = np.linspace(-1,1,SEPARACION_FONDO, dtype= np.float32)
@@ -280,7 +297,7 @@ class App:
         glUseProgram(self.shader)
         glBindVertexArray(self.VAO)
 
-        
+        puntos_agregados = 0
 
         tiempo0 = time.time()
         tiempo = tiempo0
@@ -292,6 +309,7 @@ class App:
         mov_x = 0
         mov_y = 0
         while running:
+
             tiempo = time.time()
             deltaT = tiempo - tiempoViejo
 
@@ -322,13 +340,21 @@ class App:
                         mov_y = mov_y - 1
                 elif event.type == pg.MOUSEWHEEL:
                     self.escala = self.escala*(1-event.y/8)
+                elif event.type == pg.MOUSEBUTTONDOWN:
+                    if puntos_agregados < PUNTOS_AGREGAR:
+                        mouse_x, mouse_y  =pg.mouse.get_pos()
+                        mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
+                        mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
+                        self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
+                        self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
+                        self.cant_puntos = self.cant_puntos + 1
+                        puntos_agregados = puntos_agregados + 1
 
-
-            #movimiento
+            #movimiento cámara
             if mov_x != 0:
-                self.camara_x = self.camara_x + mov_x*self.escala*deltaT/2
+                self.camara_x = self.camara_x + mov_x*self.escala*deltaT
             if mov_y != 0:
-                self.camara_y = self.camara_y + mov_y*self.escala*deltaT/2
+                self.camara_y = self.camara_y + mov_y*self.escala*deltaT
 
             glClear(GL_COLOR_BUFFER_BIT)
 
@@ -336,16 +362,20 @@ class App:
             if PINTAR_EJES:
                 self.ejes()
 
-            self.x , self.y = paso(self.x, self.y, tiempo - tiempo0, deltaT, met=METODO_NUMERICO)
+            self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempo - tiempo0, deltaT, met=METODO_NUMERICO)
 
-            positions = circulo((self.x-self.camara_x)/self.escala, (self.y - self.camara_y)/self.escala, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
-            glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
-            glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
+            for i in range(self.cant_puntos):
+                x = self.x[i]
+                y = self.y[i]
 
-            positions = circunferencia((self.x-self.camara_x)/self.escala, (self.y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
-            glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
-            glLineWidth(1.5)
-            glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC)
+                positions = circulo((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
+                glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
+                glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
+
+                positions = circunferencia((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
+                glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
+                glLineWidth(1.5)
+                glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC)
             
 
             if time.time() - timerfps < 1:
