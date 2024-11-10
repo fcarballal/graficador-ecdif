@@ -341,7 +341,7 @@ class App:
                 elif event.type == pg.MOUSEWHEEL:
                     self.escala = self.escala*(1-event.y/8)
                 elif event.type == pg.MOUSEBUTTONDOWN:
-                    if puntos_agregados < PUNTOS_AGREGAR:
+                    if pg.mouse.get_pressed()[0] and puntos_agregados < PUNTOS_AGREGAR:
                         mouse_x, mouse_y  =pg.mouse.get_pos()
                         mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
                         mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
