@@ -179,8 +179,8 @@ class App:
         for i in range(PUNTOS_AGREGAR):
             x.append(0)
             y.append(0)
-        self.x = np.array(x, dtype = np.float32)
-        self.y = np.array(y, dtype = np.float32)
+        self.x = np.array(x, dtype = np.float64)
+        self.y = np.array(y, dtype = np.float64)
 
         #Estructura para el fondo
         grilla = np.linspace(-1,1,SEPARACION_FONDO, dtype= np.float32)
@@ -322,7 +322,10 @@ class App:
                 glLineWidth(1.5)
                 glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC) 
             pg.display.flip()
-            time.sleep(1)
+            time.sleep(RETRASO)
+            for event in pg.event.get():
+                if (event.type == pg.QUIT):
+                    running = False
 
         tiempo0 = time.time()
         tiempo = tiempo0
