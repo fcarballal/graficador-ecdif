@@ -7,6 +7,10 @@ import time
 import math
 
 
+#Muestra las condiciones iniciales por esta cantidad de segundos antes de comenzar.
+#Poner en 0 para que empiece de una.
+RETRASO = 1
+
 #Si se pinta el fondo con colores o no
 PINTAR_FONDO = True
 
@@ -299,6 +303,27 @@ class App:
 
         puntos_agregados = 0
 
+        
+        if RETRASO > 0:
+            glClear(GL_COLOR_BUFFER_BIT)
+            self.pintar_fondo(0)
+            if PINTAR_EJES:
+                self.ejes()
+            for i in range(self.cant_puntos):
+                x = self.x[i]
+                y = self.y[i]
+
+                positions = circulo((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
+                glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
+                glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
+
+                positions = circunferencia((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
+                glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
+                glLineWidth(1.5)
+                glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC) 
+            pg.display.flip()
+            time.sleep(1)
+
         tiempo0 = time.time()
         tiempo = tiempo0
         tiempoViejo = tiempo0
@@ -308,6 +333,7 @@ class App:
         running = True
         mov_x = 0
         mov_y = 0
+
         while running:
 
             tiempo = time.time()
@@ -356,14 +382,13 @@ class App:
             if mov_y != 0:
                 self.camara_y = self.camara_y + mov_y*self.escala*deltaT
 
+            self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempoViejo - tiempo0, deltaT, met=METODO_NUMERICO)
+            
             glClear(GL_COLOR_BUFFER_BIT)
 
             self.pintar_fondo(tiempo - tiempo0)
             if PINTAR_EJES:
                 self.ejes()
-
-            self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempo - tiempo0, deltaT, met=METODO_NUMERICO)
-
             for i in range(self.cant_puntos):
                 x = self.x[i]
                 y = self.y[i]
