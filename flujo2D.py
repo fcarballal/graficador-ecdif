@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import odeint
-import pygame as pg
+import glfw
+import glfw.GLFW as GLFW_CONSTANTS
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import time
@@ -126,9 +127,6 @@ def create_shader_program(vertex_filepath: str, fragment_filepath: str) -> int:
 
     shader = compileProgram(vertex_module, fragment_module)
 
-    glDeleteShader(vertex_module)
-    glDeleteShader(fragment_module)
-
     return shader
 
 def create_shader_module(filepath: str, module_type: int) -> int:
@@ -167,11 +165,18 @@ def circunferencia(xc, yc, r, rojo, verde, azul, disc_circ):
     res[:,4] = verde
     res[:,5] = azul
     return res.flatten()
+
+
+g_escala = ESCALA
+def event_scroll(win, x, y):
+    global g_escala
+    g_escala = g_escala*(1-y/8)
+
 class App:
 
 
     def __init__(self):
-        self.initialize_pygame()
+        self.initialize_glfw()
         self.initialize_opengl()
         
         x, y = posiciones_iniciales()
@@ -209,9 +214,20 @@ class App:
 
 
 
-    def initialize_pygame(self):
-        pg.init()
-        pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pg.OPENGL|pg.DOUBLEBUF)
+    def initialize_glfw(self):
+        glfw.init()
+        glfw.window_hint(
+            GLFW_CONSTANTS.GLFW_OPENGL_PROFILE,
+            GLFW_CONSTANTS.GLFW_OPENGL_CORE_PROFILE
+        )
+        glfw.window_hint(GLFW_CONSTANTS.GLFW_CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(GLFW_CONSTANTS.GLFW_CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(GLFW_CONSTANTS.GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE)
+        self.window = glfw.create_window(SCREEN_WIDTH, SCREEN_HEIGHT, "Graficador", None, None)
+        glfw.make_context_current(self.window)
+
+        glfw.set_scroll_callback(self.window, event_scroll)
+        #glfw.set_input_mode(self.window, GLFW_CONSTANTS.GLFW_STICKY_KEYS,GL_TRUE)
     
     def initialize_opengl(self):
         glClearColor(0.0,0.0,0.0,0.0)
@@ -266,16 +282,25 @@ class App:
                 glDrawArrays(GL_TRIANGLES, 0, 12)
         else:
             glUseProgram(self.shaderT)
-            colorCentro = 0.85
+            colorCentro = 1
             color = 0.5
+            epsilon_x = 1/SCREEN_WIDTH
+            epsilon_y = 1/SCREEN_HEIGHT
             lineas = np.array([
             [-1,-self.camara_y/self.escala,0,colorCentro,colorCentro,colorCentro],
             [1,-self.camara_y/self.escala,0,colorCentro,colorCentro,colorCentro],
             [-self.camara_x/self.escala,-1,0,colorCentro,colorCentro,colorCentro],
-            [-self.camara_x/self.escala,1,0,colorCentro,colorCentro,colorCentro]], dtype=np.float32)
-            glLineWidth(2)
+            [-self.camara_x/self.escala,1,0,colorCentro,colorCentro,colorCentro],
+            [-1,-self.camara_y/self.escala+epsilon_y,0,colorCentro,colorCentro,colorCentro],
+            [1,-self.camara_y/self.escala+epsilon_y,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala+epsilon_x,-1,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala+epsilon_x,1,0,colorCentro,colorCentro,colorCentro],
+            [-1,-self.camara_y/self.escala-epsilon_y,0,colorCentro,colorCentro,colorCentro],
+            [1,-self.camara_y/self.escala-epsilon_y,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala-epsilon_x,-1,0,colorCentro,colorCentro,colorCentro],
+            [-self.camara_x/self.escala-epsilon_x,1,0,colorCentro,colorCentro,colorCentro]], dtype=np.float32)
             glBufferData(GL_ARRAY_BUFFER, lineas.nbytes, lineas, GL_STATIC_DRAW)
-            glDrawArrays(GL_LINES,0,4)
+            glDrawArrays(GL_LINES,0,12)
             if PINTAR_GRILLA:
                 ancho = math.floor(np.log10(self.escala/2))
                 escalaEjes = self.escala/(10**ancho)
@@ -290,7 +315,6 @@ class App:
                     [d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),1,0,color,color,color],
                     [-d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),-1,0,color,color,color],
                     [-d- (self.camara_x/(10**ancho) - np.floor(self.camara_x/(10**ancho)))/(self.escala/(10**ancho)),1,0,color,color,color]], dtype=np.float32)
-                    glLineWidth(1)
                     glBufferData(GL_ARRAY_BUFFER, lineas.nbytes, lineas, GL_STATIC_DRAW)
                     glDrawArrays(GL_LINES,0,8)
             glUseProgram(self.shader)
@@ -319,13 +343,9 @@ class App:
 
                 positions = circunferencia((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
                 glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
-                glLineWidth(1.5)
                 glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC) 
-            pg.display.flip()
+            glfw.swap_buffers(self.window)
             time.sleep(RETRASO)
-            for event in pg.event.get():
-                if (event.type == pg.QUIT):
-                    running = False
 
         tiempo0 = time.time()
         tiempo = tiempo0
@@ -333,51 +353,67 @@ class App:
 
         timerfps = tiempo0
         fps = 0
-        running = True
         mov_x = 0
         mov_y = 0
+        espero_tecla = {"a":True,
+                           "s":True,
+                           "d":True,
+                           "w":True,
+                           "c":True,
+                           "m_1":True}
 
-        while running:
+        
+
+        while not glfw.window_should_close(self.window):
+            self.escala = g_escala
 
             tiempo = time.time()
             deltaT = tiempo - tiempoViejo
 
-            for event in pg.event.get():
-                if (event.type == pg.QUIT):
-                    running = False
-                elif event.type == pg.KEYDOWN:
-                    if event.key == pg.K_a:
-                        mov_x = mov_x - 1
-                    if event.key == pg.K_d:
-                        mov_x = mov_x + 1
-                    if event.key == pg.K_s:
-                        mov_y = mov_y - 1
-                    if event.key == pg.K_w:
-                        mov_y = mov_y + 1
+            
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["a"]:
+                mov_x = mov_x - 1
+                espero_tecla["a"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["d"]:
+                mov_x = mov_x + 1
+                espero_tecla["d"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["s"]:
+                mov_y = mov_y - 1
+                espero_tecla["s"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["w"]:
+                mov_y = mov_y + 1
+                espero_tecla["w"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["a"]:
+                mov_x = mov_x + 1
+                espero_tecla["a"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["d"]:
+                mov_x = mov_x - 1
+                espero_tecla["d"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["s"]:
+                mov_y = mov_y + 1
+                espero_tecla["s"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["w"]:
+                mov_y = mov_y - 1
+                espero_tecla["w"] = True
 
-                    if event.key == pg.K_c:
-                        self.camara_x = 0
-                        self.camara_y = 0
-                elif event.type == pg.KEYUP:
-                    if event.key == pg.K_a:
-                        mov_x = mov_x + 1
-                    if event.key == pg.K_d:
-                        mov_x = mov_x - 1
-                    if event.key == pg.K_s:
-                        mov_y = mov_y + 1
-                    if event.key == pg.K_w:
-                        mov_y = mov_y - 1
-                elif event.type == pg.MOUSEWHEEL:
-                    self.escala = self.escala*(1-event.y/8)
-                elif event.type == pg.MOUSEBUTTONDOWN:
-                    if pg.mouse.get_pressed()[0] and puntos_agregados < PUNTOS_AGREGAR:
-                        mouse_x, mouse_y  =pg.mouse.get_pos()
-                        mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
-                        mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
-                        self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
-                        self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
-                        self.cant_puntos = self.cant_puntos + 1
-                        puntos_agregados = puntos_agregados + 1
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["c"]:
+                self.camara_x = 0
+                self.camara_y = 0
+                espero_tecla["c"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["c"]:
+                espero_tecla["c"] = True
+
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS and espero_tecla["m_1"]:
+                mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
+                mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
+                mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
+                self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
+                self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
+                self.cant_puntos = self.cant_puntos + 1
+                puntos_agregados = puntos_agregados + 1
+                espero_tecla["m_1"] = False
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_RELEASE and not espero_tecla["m_1"]:
+                espero_tecla["m_1"] = True
 
             #movimiento cámara
             if mov_x != 0:
@@ -402,14 +438,13 @@ class App:
 
                 positions = circunferencia((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, 0, 0, RES_CIRC)
                 glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
-                glLineWidth(1.5)
                 glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC)
             
 
             if time.time() - timerfps < 1:
                 fps = fps + 1
             else:
-                pg.display.set_caption("Frames por segundo: " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
+                glfw.set_window_title(self.window, "Frames por segundo: " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
                 timerfps = time.time()
                 fps = 0
 
@@ -417,14 +452,16 @@ class App:
 
             tiempoViejo = tiempo
 
-            pg.display.flip()
+            glfw.swap_buffers(self.window)
+            glfw.poll_events()
 
     def quit(self):
 
         glDeleteVertexArrays(1,(self.VAO,))
         glDeleteBuffers(2,(self.pos_buffer, self.elm_buffer))
         glDeleteProgram(self.shader)
-        pg.quit()
+        glfw.destroy_window(self.window)
+        glfw.terminate()
 
 my_app = App()
 my_app.run()
