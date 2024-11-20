@@ -170,12 +170,13 @@ class App:
     def initialize_opengl(self):
         glClearColor(0.0,0.0,0.0,0.0)
         self.VAO = glGenVertexArrays(1)
+        glBindVertexArray(self.VAO)
         self.shader = create_shader_program("shaders/vertex.txt", "shaders/fragment.txt")
         self.shaderT = create_shader_program("shaders/vertex.txt", "shaders/fragment2.txt")
         
 
 
-        glBindVertexArray(self.VAO)
+        
 
         pos_buffer = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, pos_buffer)
