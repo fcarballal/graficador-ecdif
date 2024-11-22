@@ -16,19 +16,19 @@ from flujo2DParams import *
 #Esta función es el método numérico para dar un paso en la solución de la ecuación diferencial.
 def paso(x, y, t, deltaT, met=METODO_NUMERICO):
     if met == "E_AD":
-        der_x, der_y = flujo_funcion(x,y, t)
+        der_x, der_y = flujo_funcion(t, x,y)
         return  x + deltaT*der_x, y + deltaT*der_y
     elif met == "H":
-        der_x, der_y = flujo_funcion(x,y,t)
+        der_x, der_y = flujo_funcion(t, x,y)
         x1 = x + deltaT*der_x
         y1 = y + deltaT*der_y
-        der_x1, der_y1 = flujo_funcion(x1, y1, t + deltaT)
+        der_x1, der_y1 = flujo_funcion(t + deltaT, x1, y1)
         der_xf = (der_x + der_x1)/2
         der_yf = (der_y + der_y1)/2
         return x + deltaT*der_xf, y + deltaT*der_yf
     elif met == "SP":
         def func(y,t):
-            x1, y1 = flujo_funcion(y[0],y[1], t)
+            x1, y1 = flujo_funcion(t, y[0],y[1])
             return [x1,y1]
         for i in range(x.size):    
             y0 = [x[i],y[i]]
@@ -44,10 +44,6 @@ def create_shader_program(vertex_filepath: str, fragment_filepath: str) -> int:
     fragment_module = create_shader_module(fragment_filepath, GL_FRAGMENT_SHADER)
 
     shader = compileProgram(vertex_module, fragment_module)
-
-    if not MAC:
-        glDeleteShader(vertex_module)
-        glDeleteShader(fragment_module)
 
     return shader
 
@@ -116,21 +112,21 @@ class App:
         self.y = np.array(y, dtype = np.float64)
 
         #Estructura para el fondo
-        grilla = np.linspace(-1,1,SEPARACION_FONDO, dtype= np.float32)
-        self.datos_fondo = np.zeros((SEPARACION_FONDO**2, 6), dtype= np.float32)
-        self.datos_fondo[:,0] = np.repeat(grilla, SEPARACION_FONDO)
-        self.datos_fondo[:,1] = np.tile(grilla, SEPARACION_FONDO)
-        datos = np.zeros(6*(SEPARACION_FONDO - 1)**2, dtype = np.uint32)
+        grilla = np.linspace(-1,1,RESOLUCION_FONDO, dtype= np.float32)
+        self.datos_fondo = np.zeros((RESOLUCION_FONDO**2, 6), dtype= np.float32)
+        self.datos_fondo[:,0] = np.repeat(grilla, RESOLUCION_FONDO)
+        self.datos_fondo[:,1] = np.tile(grilla, RESOLUCION_FONDO)
+        datos = np.zeros(6*(RESOLUCION_FONDO - 1)**2, dtype = np.uint32)
         iter = 0
-        for i in range(SEPARACION_FONDO - 1):
-            for j in range(SEPARACION_FONDO - 1):
-                actual = SEPARACION_FONDO*i + j
+        for i in range(RESOLUCION_FONDO - 1):
+            for j in range(RESOLUCION_FONDO - 1):
+                actual = RESOLUCION_FONDO*i + j
                 datos[iter] = actual
-                datos[iter+1] = actual + SEPARACION_FONDO + 1
-                datos[iter+2] = actual + SEPARACION_FONDO
+                datos[iter+1] = actual + RESOLUCION_FONDO + 1
+                datos[iter+2] = actual + RESOLUCION_FONDO
                 datos[iter+3] = actual
                 datos[iter+4] = actual + 1
-                datos[iter+5] = actual + SEPARACION_FONDO + 1
+                datos[iter+5] = actual + RESOLUCION_FONDO + 1
                 iter = iter + 6
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, datos.nbytes, datos, GL_STATIC_DRAW)
 
@@ -194,6 +190,7 @@ class App:
         
 
     def procesar_entrada(self):
+        global g_escala
         # Ajusto la escala con la variable global que se modifica con interrupciones
         self.escala = g_escala
         
@@ -226,6 +223,7 @@ class App:
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["c"]:
             self.camara_x = 0
             self.camara_y = 0
+            g_escala = ESCALA
             self.espero_tecla["c"] = False
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["c"]:
             self.espero_tecla["c"] = True
@@ -246,15 +244,15 @@ class App:
     def pintar_fondo(self, t):
 
         if PINTAR_FONDO:
-            dx, dy = flujo_funcion(self.escala*self.datos_fondo[:,0] + self.camara_x, self.escala*self.datos_fondo[:,1] + self.camara_y, t)
-            rojo, verde, azul = funcion_color(self.escala*self.datos_fondo[:,0] + self.camara_x, self.escala*self.datos_fondo[:,1] + self.camara_y, dx, dy)
+            dx, dy = flujo_funcion(t, self.escala*self.datos_fondo[:,0] + self.camara_x, self.escala*self.datos_fondo[:,1] + self.camara_y)
+            rojo, verde, azul = funcion_color(t, self.escala*self.datos_fondo[:,0] + self.camara_x, self.escala*self.datos_fondo[:,1] + self.camara_y, dx, dy)
             self.datos_fondo[:,3] = rojo
             self.datos_fondo[:,4] = verde
             self.datos_fondo[:,5] = azul
             
             grilla = self.datos_fondo.flatten()
             glBufferData(GL_ARRAY_BUFFER, grilla.nbytes, grilla, GL_STATIC_DRAW)
-            glDrawElements(GL_TRIANGLES, 6*(SEPARACION_FONDO - 1)**2, GL_UNSIGNED_INT, ctypes.c_void_p(0))
+            glDrawElements(GL_TRIANGLES, 6*(RESOLUCION_FONDO - 1)**2, GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
     def dibujar_ejes(self):
         if PINTAR_EJES:
@@ -311,7 +309,7 @@ class App:
             x = self.x[i]
             y = self.y[i]
 
-            positions = circulo((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, 0, ATENUACION_COLOR, 0, RES_CIRC)
+            positions = circulo((x-self.camara_x)/self.escala, (y - self.camara_y)/self.escala, 0.015, ATENUACION_COLOR*SOL_ROJO, ATENUACION_COLOR*SOL_VERDE, ATENUACION_COLOR*SOL_AZUL, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
 
@@ -354,7 +352,7 @@ class App:
             
             if time.time() - timerfps < 1:  fps = fps + 1 #FPS      
             else:
-                glfw.set_window_title(self.window, "Frames por segundo: " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
+                glfw.set_window_title(self.window, "Frames por segundo (fps) : " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
                 timerfps = time.time()
                 fps = 0
 
