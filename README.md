@@ -1,4 +1,4 @@
-INSTALACIÓN
+Graficador de ecuaciones diferenciales ordinarias.
 
 Hay que tener python y los siguientes paquetes:
 numpy, scipy, PyOpenGL, glfw.
@@ -7,7 +7,7 @@ Para instalar los paquetes, alcanza ejecutar lo siguiente en la terminal:
 pip install numpy, scipy, PyOpenGL, glfw
 
 
-Graficador de ecuaciones diferenciales ordinarias.
+
 
 Se ejecuta el archivo flujo2D.py
 
