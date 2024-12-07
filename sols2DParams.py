@@ -27,9 +27,9 @@ def posiciones_iniciales():
 ########################
 
 # Parámetros de Van Der Pol (por si se decide usar esta ecuación diferencial)
-MU = 1
-A = 3
-OMEGA = 3
+MU = 2
+A = 13
+OMEGA = 4
 
 # Función de la ecuación diferencial.
 # Lo que se retorna son x' e y' en ese orden, es decir, cuando dice "return dx, dy", significa que dx es x', y que dy es y'.
@@ -37,7 +37,7 @@ OMEGA = 3
 # Eso es importante porque debe funcionar componente a componente en el caso de que x,y sean arreglos (vectores).
 # Por ejemplo, para seno se debe usar np.sin(), para exponencial np.exp(), etc.
 # Recordar que en python la exponencial es a**b.
-def flujo_funcion(t,x,y):
+def ec_dif(t,x,y):
     return  y, MU*(1-x*x)*y - x + A*np.sin(OMEGA*t)
 
 
@@ -93,7 +93,7 @@ def funcion_color(t, x, y, dx, dy):
 METODO_NUMERICO = "SP"
 
 
-#Colores de las soluciones
+#Color de las soluciones
 SOL_ROJO = 0
 SOL_VERDE = 1
 SOL_AZUL = 0
@@ -104,7 +104,7 @@ SCREEN_WIDTH = 750
 SCREEN_HEIGHT = 750
 
 
-#Muestra las condiciones iniciales por esta cantidad de segundos antes de comenzar. En Mac no funciona bien.
+#Muestra las condiciones iniciales por esta cantidad de segundos antes de comenzar. Solo en Windows sé que funciona.
 #Poner en 0 para que empiece de una.
 RETRASO = 1
 

@@ -3,7 +3,10 @@ Graficador de ecuaciones diferenciales ordinarias.
 Hay que tener python y los siguientes paquetes:
 numpy, scipy, PyOpenGL, glfw.
 
-Para instalar los paquetes, alcanza ejecutar lo siguiente en la terminal:
+Para instalar los paquetes, alcanza ejecutar lo siguiente en una terminal (desde la carpeta donde está el archivo "requirements.txt"):
+pip install -r requirements.txt
+
+O alternativamente:
 pip install numpy, scipy, PyOpenGL, glfw
 
 
