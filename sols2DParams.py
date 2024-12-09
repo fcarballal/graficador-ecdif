@@ -1,7 +1,7 @@
 import numpy as np
 
-# Hace más suave los colores. Con 0 queda todo negro.
-ATENUACION_COLOR = 1
+# Hace más suave los colores del fondo. Con 0 queda todo negro.
+ATENUACION_FONDO = 0.5
 
 
 #########################
@@ -83,7 +83,7 @@ def psicodelico(v):
 # que para flujo_funcion (usar funciones de numpy).
 def funcion_color(t, x, y, dx, dy):
     rojo, verde, azul = pos_neg(dy)
-    return ATENUACION_COLOR*rojo, ATENUACION_COLOR*verde, ATENUACION_COLOR*azul
+    return ATENUACION_FONDO*rojo, ATENUACION_FONDO*verde, ATENUACION_FONDO*azul
 
 
 #Método numérico a usar para resolver.
@@ -92,12 +92,24 @@ def funcion_color(t, x, y, dx, dy):
 #SP: Usa el solver de Scipy
 METODO_NUMERICO = "SP"
 
+#Poner en true si se quiere que todas las soluciones tengan el mismo color
+COLOR_UNICO = False
 
-#Color de las soluciones
+#Color de las soluciones con COLOR_UNICO = True
 SOL_ROJO = 0
 SOL_VERDE = 1
 SOL_AZUL = 0
 
+#Colores de las soluciones con COLOR_UNICO = False
+COLORES = {1:(1,0.8,0.5),
+           2:(0,1,0),
+           3:(1,0.5,0.8),
+           4:(1,1,0),
+           5:(1,0,1),
+           6:(0,1,1),
+           7:(1,1,1),
+           8:(1,0,0),
+           9:(0,0,1)}
 
 #Resolución de la ventana
 SCREEN_WIDTH = 750

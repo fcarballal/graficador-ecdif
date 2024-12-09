@@ -31,9 +31,9 @@ def create_shader_module(filepath: str, module_type: int) -> int:
     return compileShader(source_code, module_type)
 
 def triangulito(x, y, delta):
-    return np.array((x - delta, y - delta, 0.0, ATENUACION_COLOR, ATENUACION_COLOR, ATENUACION_COLOR,
-                     x + delta, y - delta, 0.0, ATENUACION_COLOR, ATENUACION_COLOR, ATENUACION_COLOR,
-                     x, y + delta, 0.0, ATENUACION_COLOR, ATENUACION_COLOR, ATENUACION_COLOR),
+    return np.array((x - delta, y - delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO,
+                     x + delta, y - delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO,
+                     x, y + delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO),
                      dtype = np.float32)
 
 def circulo(xc, yc, r, rojo, verde, azul, disc_circ):
@@ -86,6 +86,10 @@ class App:
             y.append(0)
         self.x = np.array(x, dtype = np.float64)
         self.y = np.array(y, dtype = np.float64)
+        self.colores = np.ones(self.x.size)
+        for i in range(self.x.size):
+            self.colores[i] = self.colores[i] + i%9
+        self.color_actual = 1
 
         #Estructura para el fondo
         grilla = np.linspace(-1,1,RESOLUCION_FONDO, dtype= np.float32)
@@ -209,13 +213,31 @@ class App:
             self.espero_tecla["c"] = False
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["c"]:
             self.espero_tecla["c"] = True
-
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_1) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 1
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_2) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 2
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_3) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 3
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_4) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 4
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_5) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 5
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_6) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 6
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_7) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 7
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_8) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 8
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_9) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.color_actual = 9    
         if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["m_1"]:
             mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
             mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
             mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
             self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
             self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
+            self.colores[self.cant_puntos] = self.color_actual
             self.cant_puntos = self.cant_puntos + 1
             self.puntos_agregados = self.puntos_agregados + 1
             self.espero_tecla["m_1"] = False
@@ -290,8 +312,11 @@ class App:
         for i in range(self.cant_puntos):
             x = self.x[i]
             y = self.y[i]
+            (rojo,azul,verde) = COLORES[self.colores[i]]
+            if COLOR_UNICO:
+                (rojo,azul,verde) = (SOL_ROJO,SOL_VERDE,SOL_AZUL)
 
-            positions = circulo(self.scx(x), self.scy(y), 0.015, ATENUACION_COLOR*SOL_ROJO, ATENUACION_COLOR*SOL_VERDE, ATENUACION_COLOR*SOL_AZUL, RES_CIRC)
+            positions = circulo(self.scx(x), self.scy(y), 0.015, rojo,azul,verde, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
 
