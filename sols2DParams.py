@@ -1,7 +1,7 @@
 import numpy as np
 
 # Hace más suave los colores del fondo. Con 0 queda todo negro.
-ATENUACION_FONDO = 0.5
+ATENUACION_FONDO = 1
 
 
 #########################
@@ -28,7 +28,7 @@ def posiciones_iniciales():
 
 # Parámetros de Van Der Pol (por si se decide usar esta ecuación diferencial)
 MU = 2
-A = 13
+A = 3
 OMEGA = 4
 
 # Función de la ecuación diferencial.
@@ -114,11 +114,6 @@ COLORES = {1:(1,0.8,0.5),
 #Resolución de la ventana
 SCREEN_WIDTH = 750
 SCREEN_HEIGHT = 750
-
-
-#Muestra las condiciones iniciales por esta cantidad de segundos antes de comenzar. Solo en Windows sé que funciona.
-#Poner en 0 para que empiece de una.
-RETRASO = 1
 
 
 #Si se dibujan ejes y grilla o no

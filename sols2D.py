@@ -121,7 +121,9 @@ class App:
                            "d":True,
                            "w":True,
                            "c":True,
-                           "m_1":True}
+                           "m_1":True,
+                           "sp":True}
+        self.pausa = True
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable( GL_BLEND )
         glUseProgram(self.shader)
@@ -181,6 +183,18 @@ class App:
         self.escala = g_escala
         
         #Procesamiento de input
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["sp"]:
+            if self.pausa:
+                self.pausa = False
+                self.desfazaje = self.tiempoR - self.tiempo
+                self.deltaT = 0
+            else:
+                self.pausa = True
+                self.tiempo = self.tiempoViejo
+            self.espero_tecla["sp"] = False
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["sp"]:
+            self.espero_tecla["sp"] = True
+
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["a"]:
             self.mov_x = self.mov_x - 1
             self.espero_tecla["a"] = False
@@ -232,18 +246,29 @@ class App:
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_9) == GLFW_CONSTANTS.GLFW_PRESS:
             self.color_actual = 9    
         if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["m_1"]:
-            mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
-            mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
-            mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
-            self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
-            self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
-            self.colores[self.cant_puntos] = self.color_actual
-            self.cant_puntos = self.cant_puntos + 1
-            self.puntos_agregados = self.puntos_agregados + 1
+            if self.cant_puntos < self.x.size:
+                mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
+                mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
+                mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
+                self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
+                self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
+                self.colores[self.cant_puntos] = self.color_actual
+                self.cant_puntos = self.cant_puntos + 1
+                self.puntos_agregados = self.puntos_agregados + 1
             self.espero_tecla["m_1"] = False
         if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["m_1"]:
             self.espero_tecla["m_1"] = True
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_BACKSPACE) == GLFW_CONSTANTS.GLFW_PRESS:
+            self.cant_puntos = 0
 
+    def fisica(self,tiempoViejo, tiempo, deltaT):
+        if self.mov_x != 0: self.camara_x = self.camara_x + self.mov_x*self.escala*deltaT    #Muevo la cámara si es necesario
+        if self.mov_y != 0: self.camara_y = self.camara_y + self.mov_y*self.escala*deltaT
+
+        #Actualización de posiciones
+        if not self.pausa:
+            self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempoViejo, deltaT)
+            
 
     def pintar_fondo(self, t):
 
@@ -326,44 +351,40 @@ class App:
 
     def run(self):
 
-        if RETRASO > 0:
-            glClear(GL_COLOR_BUFFER_BIT)
-            self.pintar_fondo(0)
-            self.dibujar_ejes()
-            self.dibujar_soluciones()
-            glfw.swap_buffers(self.window)
-            time.sleep(RETRASO)
-
-        desfazaje = time.time()
-        tiempo = 0
-        tiempoViejo = 0
-        timerfps = desfazaje
+        self.tiempoR = time.time() #Los con R son tiempo real
+        self.tiempoViejoR = self.tiempoR
+        self.desfazaje = self.tiempoR
+        self.tiempo = 0            #Los sin R son tiempo de la ecuación
+        self.tiempoViejo = 0
+        
+        self.timerfps = self.tiempoR
         fps = 0
+        self.deltaT = 0
 
         while not glfw.window_should_close(self.window):
-            tiempo = time.time() - desfazaje
-            deltaT = tiempo - tiempoViejo
+            self.tiempoR = time.time()
+            self.deltaT = self.tiempoR - self.tiempoViejoR
+            if not self.pausa:
+                self.tiempo = self.tiempoR - self.desfazaje
+                self.tiempoViejo = self.tiempoViejoR - self.desfazaje
+
 
             self.procesar_entrada() #Proceso el input del teclado y el ratón. También muevo la cámara
 
-            if self.mov_x != 0: self.camara_x = self.camara_x + self.mov_x*self.escala*deltaT    #Muevo la cámara si es necesario
-            if self.mov_y != 0: self.camara_y = self.camara_y + self.mov_y*self.escala*deltaT
+            self.fisica(self.tiempoViejo, self.tiempo, self.deltaT) #Las cosas se mueven
 
-            #Actualización de posiciones
-            self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempoViejo, deltaT)
-            
             glClear(GL_COLOR_BUFFER_BIT) #Dibujo
-            self.pintar_fondo(tiempo)
+            self.pintar_fondo(self.tiempo)
             self.dibujar_ejes()
             self.dibujar_soluciones()
             
-            if time.time() - timerfps < 1:  fps = fps + 1 #FPS      
+            if time.time() - self.timerfps < 1:  fps = fps + 1 #FPS      
             else:
                 glfw.set_window_title(self.window, "Frames por segundo (fps) : " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
-                timerfps = time.time()
+                self.timerfps = time.time()
                 fps = 0
 
-            tiempoViejo = tiempo
+            self.tiempoViejoR = self.tiempoR
 
             glfw.swap_buffers(self.window)
             glfw.poll_events()
