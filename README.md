@@ -18,7 +18,7 @@ En el archivo flujo2DParams.py se puede modificar la ecuación diferencial, las 
 
 CONTROLES:
 
-- barra espaciadora : pausa/continuar (commienza en pausa)
+- barra espaciadora : pausa/continuar (comienza en pausa)
 - tecla "a" : mover hacia la izquierda
 - tecla "d" : mover hacia la derecha
 - tecla "w" : mover hacia arriba
