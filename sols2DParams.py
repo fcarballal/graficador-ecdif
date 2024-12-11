@@ -27,8 +27,8 @@ def posiciones_iniciales():
 ########################
 
 # Parámetros de Van Der Pol (por si se decide usar esta ecuación diferencial)
-MU = 2
-A = 3
+MU = 1
+A = 5
 OMEGA = 4
 
 # Función de la ecuación diferencial.
@@ -84,6 +84,20 @@ def psicodelico(v):
 def funcion_color(t, x, y, dx, dy):
     rojo, verde, azul = pos_neg(dy)
     return ATENUACION_FONDO*rojo, ATENUACION_FONDO*verde, ATENUACION_FONDO*azul
+
+
+################
+#### RASTROS ###
+################
+
+# Durante cuánto tiempo se pintan los rastros. Cuanto mayor, más grandes son las estructuras de datos
+# y más lento se vuelve el programa. 
+DURACION = 30
+
+#Cuántos puntos se hacen por segundo (el rastro es en realidad una lineal a trozos)
+PUNTOS_POR_SEG = 100
+
+
 
 
 #Método numérico a usar para resolver.

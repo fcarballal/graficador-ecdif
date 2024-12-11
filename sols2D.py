@@ -109,7 +109,7 @@ class App:
                 datos[iter+5] = actual + RESOLUCION_FONDO + 1
                 iter = iter + 6
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, datos.nbytes, datos, GL_STATIC_DRAW)
-
+        self.elems_fondo = datos
         self.escala = g_escala
         self.camara_x = 0
         self.camara_y = 0
@@ -122,8 +122,16 @@ class App:
                            "w":True,
                            "c":True,
                            "m_1":True,
-                           "sp":True}
+                           "sp":True,
+                           "l":True}
         self.pausa = True
+
+        self.rastros = False
+        self.rastros_datos = 0
+        self.cant_lineas = PUNTOS_POR_SEG*DURACION
+        self.linea_actual = 0
+        self.puntos_rastro = 0
+
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable( GL_BLEND )
         glUseProgram(self.shader)
@@ -260,13 +268,44 @@ class App:
             self.espero_tecla["m_1"] = True
         if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_BACKSPACE) == GLFW_CONSTANTS.GLFW_PRESS:
             self.cant_puntos = 0
+            self.rastros = False
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["l"]:
+            if self.rastros:
+                self.rastros = False
+            elif self.pausa and self.cant_puntos > 0:
+                self.rastros = True
+                self.puntos_rastro = self.cant_puntos
+                self.linea_actual = 0
+                self.rastros_datos = np.zeros((self.cant_puntos,self.cant_lineas,6),dtype=np.float32)
+                for i in range(self.cant_puntos): #Poner los colores por solución
+                    (rojo,verde,azul) = COLORES[self.colores[i]]
+                    self.rastros_datos[i,:,3] = rojo
+                    self.rastros_datos[i,:,4] = verde
+                    self.rastros_datos[i,:,5] = azul
+                self.elems_rastro = np.zeros(self.puntos_rastro*self.cant_lineas*2, dtype = np.uint32) #Elementos
+                for i in range(self.cant_lineas-1):
+                    for j in range(self.puntos_rastro):
+                        self.elems_rastro[2*self.puntos_rastro*i + 2*j] = self.cant_lineas*j + i
+                        self.elems_rastro[2*self.puntos_rastro*i + 2*j + 1] = self.cant_lineas*j + i + 1
+
+
+            self.espero_tecla["l"] = False
+        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["l"]:
+            self.espero_tecla["l"] = True
 
     def fisica(self,tiempoViejo, tiempo, deltaT):
         if self.mov_x != 0: self.camara_x = self.camara_x + self.mov_x*self.escala*deltaT    #Muevo la cámara si es necesario
         if self.mov_y != 0: self.camara_y = self.camara_y + self.mov_y*self.escala*deltaT
 
-        #Actualización de posiciones
+        
+
+        #Actualización de posiciones y rastro
         if not self.pausa:
+            if self.rastros and self.linea_actual < self.cant_lineas and time.time()- self.timer_rastro > 1/PUNTOS_POR_SEG:
+                self.rastros_datos[:,self.linea_actual,0] = self.x[0:self.puntos_rastro]
+                self.rastros_datos[:,self.linea_actual,1] = self.y[0:self.puntos_rastro]
+                self.linea_actual = self.linea_actual + 1
+                self.timer_rastro = time.time()
             self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempoViejo, deltaT)
             
 
@@ -281,6 +320,7 @@ class App:
             
             grilla = self.datos_fondo.flatten()
             glBufferData(GL_ARRAY_BUFFER, grilla.nbytes, grilla, GL_STATIC_DRAW)
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.elems_fondo.nbytes, self.elems_fondo, GL_STATIC_DRAW)
             glDrawElements(GL_TRIANGLES, 6*(RESOLUCION_FONDO - 1)**2, GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
     def dibujar_ejes(self):
@@ -337,17 +377,26 @@ class App:
         for i in range(self.cant_puntos):
             x = self.x[i]
             y = self.y[i]
-            (rojo,azul,verde) = COLORES[self.colores[i]]
+            (rojo,verde,azul) = COLORES[self.colores[i]]
             if COLOR_UNICO:
-                (rojo,azul,verde) = (SOL_ROJO,SOL_VERDE,SOL_AZUL)
+                (rojo,verde,azul) = (SOL_ROJO,SOL_VERDE,SOL_AZUL)
 
-            positions = circulo(self.scx(x), self.scy(y), 0.015, rojo,azul,verde, RES_CIRC)
+            positions = circulo(self.scx(x), self.scy(y), 0.015, rojo,verde,azul, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glDrawArrays(GL_TRIANGLE_FAN, 0, RES_CIRC + 1)
 
             positions = circunferencia(self.scx(x), self.scy(y), 0.015, 0, 0, 0, RES_CIRC)
             glBufferData(GL_ARRAY_BUFFER, positions.nbytes, positions, GL_STATIC_DRAW)
             glDrawArrays(GL_LINE_STRIP, 0, RES_CIRC)
+
+    def dibujar_rastros(self):
+            if self.linea_actual > 1:
+                datosPintar = np.copy(self.rastros_datos)
+                datosPintar[:,:,0] = self.scx(datosPintar[:,:,0])
+                datosPintar[:,:,1] = self.scy(datosPintar[:,:,1])
+                glBufferData(GL_ARRAY_BUFFER, self.rastros_datos.nbytes, datosPintar.flatten(), GL_STATIC_DRAW)
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.elems_rastro.nbytes, self.elems_rastro, GL_STATIC_DRAW)
+                glDrawElements(GL_LINES, 2*self.puntos_rastro*(self.linea_actual - 1), GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
     def run(self):
 
@@ -357,6 +406,7 @@ class App:
         self.tiempo = 0            #Los sin R son tiempo de la ecuación
         self.tiempoViejo = 0
         
+        self.timer_rastro = time.time()
         self.timerfps = self.tiempoR
         fps = 0
         self.deltaT = 0
@@ -373,10 +423,11 @@ class App:
 
             self.fisica(self.tiempoViejo, self.tiempo, self.deltaT) #Las cosas se mueven
 
-            glClear(GL_COLOR_BUFFER_BIT) #Dibujo
+            glClear(GL_COLOR_BUFFER_BIT) #Dibujo. Cambiando el orden cambia cual queda arriba
             self.pintar_fondo(self.tiempo)
             self.dibujar_ejes()
             self.dibujar_soluciones()
+            if self.rastros : self.dibujar_rastros()
             
             if time.time() - self.timerfps < 1:  fps = fps + 1 #FPS      
             else:
