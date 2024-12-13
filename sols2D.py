@@ -123,7 +123,8 @@ class App:
                            "c":True,
                            "m_1":True,
                            "sp":True,
-                           "l":True}
+                           "l":True,
+                           "k":True}
         self.pausa = True
 
         self.rastros = False
@@ -131,6 +132,14 @@ class App:
         self.cant_lineas = PUNTOS_POR_SEG*DURACION
         self.linea_actual = 0
         self.puntos_rastro = 0
+
+        self.estado_ciclo = 0
+        self.dibujo_ciclo = False
+        self.ciclo_x = []
+        self.ciclo_y = []
+        self.ciclo_datos = 0
+        self.ciclo_color = 1
+        self.area = 0
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable( GL_BLEND )
@@ -186,118 +195,154 @@ class App:
         return (y - self.camara_y)/self.escala
 
     def procesar_entrada(self):
-        global g_escala
-        # Ajusto la escala con la variable global que se modifica con interrupciones
-        self.escala = g_escala
-        
-        #Procesamiento de input
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["sp"]:
-            if self.pausa:
-                self.pausa = False
-                self.desfazaje = self.tiempoR - self.tiempo
-                self.deltaT = 0
-            else:
-                self.pausa = True
-                self.tiempo = self.tiempoViejo
-            self.espero_tecla["sp"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["sp"]:
-            self.espero_tecla["sp"] = True
+        if self.estado_ciclo == 0 or self.estado_ciclo == 2:
+            global g_escala
+            # Ajusto la escala con la variable global que se modifica con interrupciones
+            self.escala = g_escala
+            
+            #Procesamiento de input
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["sp"]:
+                if self.pausa:
+                    self.pausa = False
+                    self.desfazaje = self.tiempoR - self.tiempo
+                    self.deltaT = 0
+                else:
+                    self.pausa = True
+                    self.tiempo = self.tiempoViejo
+                self.espero_tecla["sp"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_SPACE) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["sp"]:
+                self.espero_tecla["sp"] = True
 
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["a"]:
-            self.mov_x = self.mov_x - 1
-            self.espero_tecla["a"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["d"]:
-            self.mov_x = self.mov_x + 1
-            self.espero_tecla["d"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["s"]:
-            self.mov_y = self.mov_y - 1
-            self.espero_tecla["s"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["w"]:
-            self.mov_y = self.mov_y + 1
-            self.espero_tecla["w"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["a"]:
-            self.mov_x = self.mov_x + 1
-            self.espero_tecla["a"] = True
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["d"]:
-            self.mov_x = self.mov_x - 1
-            self.espero_tecla["d"] = True
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["s"]:
-            self.mov_y = self.mov_y + 1
-            self.espero_tecla["s"] = True
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["w"]:
-            self.mov_y = self.mov_y - 1
-            self.espero_tecla["w"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["a"]:
+                self.mov_x = self.mov_x - 1
+                self.espero_tecla["a"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["d"]:
+                self.mov_x = self.mov_x + 1
+                self.espero_tecla["d"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["s"]:
+                self.mov_y = self.mov_y - 1
+                self.espero_tecla["s"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["w"]:
+                self.mov_y = self.mov_y + 1
+                self.espero_tecla["w"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_A) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["a"]:
+                self.mov_x = self.mov_x + 1
+                self.espero_tecla["a"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_D) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["d"]:
+                self.mov_x = self.mov_x - 1
+                self.espero_tecla["d"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_S) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["s"]:
+                self.mov_y = self.mov_y + 1
+                self.espero_tecla["s"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_W) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["w"]:
+                self.mov_y = self.mov_y - 1
+                self.espero_tecla["w"] = True
 
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["c"]:
-            self.camara_x = 0
-            self.camara_y = 0
-            g_escala = ESCALA
-            self.espero_tecla["c"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["c"]:
-            self.espero_tecla["c"] = True
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_1) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 1
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_2) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 2
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_3) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 3
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_4) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 4
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_5) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 5
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_6) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 6
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_7) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 7
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_8) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 8
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_9) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.color_actual = 9    
-        if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["m_1"]:
-            if self.cant_puntos < self.x.size:
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["c"]:
+                self.camara_x = 0
+                self.camara_y = 0
+                g_escala = ESCALA
+                self.espero_tecla["c"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_C) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["c"]:
+                self.espero_tecla["c"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_1) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 1
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_2) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 2
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_3) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 3
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_4) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 4
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_5) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 5
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_6) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 6
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_7) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 7
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_8) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 8
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_9) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.color_actual = 9    
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["m_1"]:
+                if self.cant_puntos < self.x.size:
+                    mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
+                    mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
+                    mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
+                    self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
+                    self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
+                    self.colores[self.cant_puntos] = self.color_actual
+                    self.cant_puntos = self.cant_puntos + 1
+                    self.puntos_agregados = self.puntos_agregados + 1
+                self.espero_tecla["m_1"] = False
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["m_1"]:
+                self.espero_tecla["m_1"] = True
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_BACKSPACE) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.cant_puntos = 0
+                self.rastros = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["l"]:
+                if self.rastros:
+                    self.rastros = False
+                elif self.pausa and self.cant_puntos > 0:
+                    self.rastros = True
+                    self.puntos_rastro = self.cant_puntos
+                    self.linea_actual = 0
+                    self.rastros_datos = np.zeros((self.cant_puntos,self.cant_lineas,6),dtype=np.float32)
+                    for i in range(self.cant_puntos): #Poner los colores por solución
+                        (rojo,verde,azul) = COLORES[self.colores[i]]
+                        self.rastros_datos[i,:,3] = rojo
+                        self.rastros_datos[i,:,4] = verde
+                        self.rastros_datos[i,:,5] = azul
+                    self.elems_rastro = np.zeros(self.puntos_rastro*self.cant_lineas*2, dtype = np.uint32) #Elementos
+                    for i in range(self.cant_lineas-1):
+                        for j in range(self.puntos_rastro):
+                            self.elems_rastro[2*self.puntos_rastro*i + 2*j] = self.cant_lineas*j + i
+                            self.elems_rastro[2*self.puntos_rastro*i + 2*j + 1] = self.cant_lineas*j + i + 1
+                self.espero_tecla["l"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["l"]:
+                self.espero_tecla["l"] = True
+
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_K) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["k"]:
+                if self.estado_ciclo == 0 and self.pausa:
+                    self.ciclo_x = []
+                    self.ciclo_y = []
+                    self.dibujo_ciclo = False
+                    self.estado_ciclo = 1
+                elif self.estado_ciclo == 2:
+                    self.estado_ciclo = 0
+                   
+                self.espero_tecla["k"] = False
+            if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_K) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["k"]:
+                self.espero_tecla["k"] = True
+        elif self.estado_ciclo == 1:
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_PRESS:
+                self.dibujo_ciclo = True
+                self.ciclo_color = self.color_actual
                 mouse_x, mouse_y  =glfw.get_cursor_pos(self.window)
                 mouse_x = (mouse_x/SCREEN_WIDTH)*2 - 1 #Lo centro
                 mouse_y = 1 - (mouse_y/SCREEN_HEIGHT)*2 #Lo centro
-                self.x[self.cant_puntos] = self.camara_x + self.escala*mouse_x
-                self.y[self.cant_puntos] = self.camara_y + self.escala*mouse_y
-                self.colores[self.cant_puntos] = self.color_actual
-                self.cant_puntos = self.cant_puntos + 1
-                self.puntos_agregados = self.puntos_agregados + 1
-            self.espero_tecla["m_1"] = False
-        if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["m_1"]:
-            self.espero_tecla["m_1"] = True
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_BACKSPACE) == GLFW_CONSTANTS.GLFW_PRESS:
-            self.cant_puntos = 0
-            self.rastros = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_PRESS and self.espero_tecla["l"]:
-            if self.rastros:
-                self.rastros = False
-            elif self.pausa and self.cant_puntos > 0:
-                self.rastros = True
-                self.puntos_rastro = self.cant_puntos
-                self.linea_actual = 0
-                self.rastros_datos = np.zeros((self.cant_puntos,self.cant_lineas,6),dtype=np.float32)
-                for i in range(self.cant_puntos): #Poner los colores por solución
-                    (rojo,verde,azul) = COLORES[self.colores[i]]
-                    self.rastros_datos[i,:,3] = rojo
-                    self.rastros_datos[i,:,4] = verde
-                    self.rastros_datos[i,:,5] = azul
-                self.elems_rastro = np.zeros(self.puntos_rastro*self.cant_lineas*2, dtype = np.uint32) #Elementos
-                for i in range(self.cant_lineas-1):
-                    for j in range(self.puntos_rastro):
-                        self.elems_rastro[2*self.puntos_rastro*i + 2*j] = self.cant_lineas*j + i
-                        self.elems_rastro[2*self.puntos_rastro*i + 2*j + 1] = self.cant_lineas*j + i + 1
+                x = self.camara_x + self.escala*mouse_x
+                y = self.camara_y + self.escala*mouse_y
+                if not self.ciclo_x or (self.ciclo_x[-1] - x)**2 + (self.ciclo_y[-1] - y)**2 > EPSILON**2/4:
+                    self.ciclo_x.append(x)
+                    self.ciclo_y.append(y)
 
+            if glfw.get_mouse_button(self.window, GLFW_CONSTANTS.GLFW_MOUSE_BUTTON_1) == GLFW_CONSTANTS.GLFW_RELEASE and self.dibujo_ciclo == True:
+                self.ciclo_x = np.array(self.ciclo_x, dtype=np.float64)
+                self.ciclo_y = np.array(self.ciclo_y, dtype=np.float64)
+                (rojo,verde,azul) = COLORES[self.ciclo_color]
+                self.ciclo_datos = np.zeros(self.ciclo_x.size*6,dtype=np.float32)
+                self.ciclo_datos[0:self.ciclo_x.size*6:6] = self.scx(self.ciclo_x)
+                self.ciclo_datos[1:self.ciclo_x.size*6:6] = self.scy(self.ciclo_y)
+                self.ciclo_datos[3:self.ciclo_x.size*6:6] = rojo
+                self.ciclo_datos[4:self.ciclo_x.size*6:6] = verde
+                self.ciclo_datos[5:self.ciclo_x.size*6:6] = azul
+                self.estado_ciclo = 2
+                self.espero_tecla["m_1"] = True
 
-            self.espero_tecla["l"] = False
-        if glfw.get_key(self.window, GLFW_CONSTANTS.GLFW_KEY_L) == GLFW_CONSTANTS.GLFW_RELEASE and not self.espero_tecla["l"]:
-            self.espero_tecla["l"] = True
 
     def fisica(self,tiempoViejo, tiempo, deltaT):
         if self.mov_x != 0: self.camara_x = self.camara_x + self.mov_x*self.escala*deltaT    #Muevo la cámara si es necesario
         if self.mov_y != 0: self.camara_y = self.camara_y + self.mov_y*self.escala*deltaT
-
-        
 
         #Actualización de posiciones y rastro
         if not self.pausa:
@@ -307,6 +352,39 @@ class App:
                 self.linea_actual = self.linea_actual + 1
                 self.timer_rastro = time.time()
             self.x[0:self.cant_puntos] , self.y[0:self.cant_puntos] = paso(self.x[0:self.cant_puntos], self.y[0:self.cant_puntos], tiempoViejo, deltaT)
+            if self.estado_ciclo == 2:
+                self.area = 0
+                self.ciclo_x, self.ciclo_y = paso(self.ciclo_x, self.ciclo_y, tiempoViejo, deltaT)
+                i = 0
+                while i < self.ciclo_x.size - 1: #Ajustar según separación
+                    dist_i2 = (self.ciclo_x[i+1] - self.ciclo_x[i])**2 + (self.ciclo_y[i+1] - self.ciclo_y[i])**2 
+                    if dist_i2 > EPSILON**2:
+                        self.area = self.area + (self.ciclo_x[i+1] - self.ciclo_x[i])*(self.ciclo_y[i]+self.ciclo_y[i+1])/2
+                        self.ciclo_x = np.insert(self.ciclo_x, i+1, (self.ciclo_x[i]+self.ciclo_x[i+1])/2)
+                        self.ciclo_y = np.insert(self.ciclo_y, i+1, (self.ciclo_y[i]+self.ciclo_y[i+1])/2)
+                        i = i + 2
+                    elif dist_i2 < EPSILON**2/100:
+                        self.ciclo_x = np.delete(self.ciclo_x,i+1)
+                        self.ciclo_y = np.delete(self.ciclo_y, i+1)
+                    else:
+                        self.area = self.area + (self.ciclo_x[i+1] - self.ciclo_x[i])*(self.ciclo_y[i]+self.ciclo_y[i+1])/2
+                        i = i+1
+                dist_pu = (self.ciclo_x[-1] - self.ciclo_x[0])**2 + (self.ciclo_y[-1] - self.ciclo_y[0])**2
+                if dist_pu > EPSILON**2:
+                    self.ciclo_x = np.append(self.ciclo_x, (self.ciclo_x[0]+self.ciclo_x[-1])/2)
+                    self.ciclo_y = np.append(self.ciclo_y, (self.ciclo_y[0]+self.ciclo_y[-1])/2)
+                elif dist_pu < EPSILON**2/100:
+                    self.ciclo_x = np.delete(self.ciclo_x,-1)
+                    self.ciclo_y = np.delete(self.ciclo_y, -1)
+                self.area = self.area + (self.ciclo_x[0] - self.ciclo_x[-1])*(self.ciclo_y[0]+self.ciclo_y[-1])/2
+
+                (rojo,verde,azul) = COLORES[self.ciclo_color]
+                self.ciclo_datos = np.zeros(self.ciclo_x.size*6,dtype=np.float32)
+                self.ciclo_datos[0:self.ciclo_x.size*6:6] = self.scx(self.ciclo_x)
+                self.ciclo_datos[1:self.ciclo_x.size*6:6] = self.scy(self.ciclo_y)
+                self.ciclo_datos[3:self.ciclo_x.size*6:6] = rojo
+                self.ciclo_datos[4:self.ciclo_x.size*6:6] = verde
+                self.ciclo_datos[5:self.ciclo_x.size*6:6] = azul
             
 
     def pintar_fondo(self, t):
@@ -398,6 +476,12 @@ class App:
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.elems_rastro.nbytes, self.elems_rastro, GL_STATIC_DRAW)
                 glDrawElements(GL_LINES, 2*self.puntos_rastro*(self.linea_actual - 1), GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
+    def dibujar_ciclo(self):
+        self.ciclo_datos[0:self.ciclo_x.size*6:6] = self.scx(self.ciclo_x)
+        self.ciclo_datos[1:self.ciclo_x.size*6:6] = self.scy(self.ciclo_y)
+        glBufferData(GL_ARRAY_BUFFER, self.ciclo_datos.nbytes, self.ciclo_datos, GL_STATIC_DRAW)
+        glDrawArrays(GL_LINE_LOOP, 0, self.ciclo_x.size)
+
     def run(self):
 
         self.tiempoR = time.time() #Los con R son tiempo real
@@ -428,11 +512,17 @@ class App:
             self.dibujar_ejes()
             self.dibujar_soluciones()
             if self.rastros : self.dibujar_rastros()
+            if self.estado_ciclo == 2 : self.dibujar_ciclo()
             
             if time.time() - self.timerfps < 1:  fps = fps + 1 #FPS      
             else:
-                glfw.set_window_title(self.window, "Frames por segundo (fps) : " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2))))
+                texto = "Frames por segundo (fps) : " + str(fps) +". Separación ejes: " + str(10**math.floor(np.log10(self.escala/2)))
+                if self.estado_ciclo == 2:
+                    texto = texto + " Área: " + str(np.abs(self.area))
+                glfw.set_window_title(self.window, texto)
                 self.timerfps = time.time()
+                if fps < 1:
+                    self.estado_ciclo = 0
                 fps = 0
 
             self.tiempoViejoR = self.tiempoR
@@ -452,3 +542,23 @@ my_app = App()
 my_app.run()
 my_app.quit()
 
+
+
+
+
+#Para colapsar puntos que se tocan en el ciclo
+"""i = 0
+                while i < self.ciclo_x.size - 1: #Colapsar puntos que se tocan
+                    j = 0
+                    while j < i:
+                        dist_ij2 = (self.ciclo_x[i] - self.ciclo_x[j])**2 + (self.ciclo_y[i] - self.ciclo_y[j])**2
+                        if dist_ij2 < EPSILON**2/10000:
+                            self.ciclo_x = np.concatenate(self.ciclo_x[:j], self.ciclo_x[i:])
+                            self.ciclo_y = np.concatenate(self.ciclo_y[:j], self.ciclo_y[i:])
+                            j = i+j
+                        else:
+                            j = j + 1
+                    if j == i:
+                        i = i + 1
+                    else:
+                        i = j - i + 1 """

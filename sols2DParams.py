@@ -27,8 +27,8 @@ def posiciones_iniciales():
 ########################
 
 # Parámetros de Van Der Pol (por si se decide usar esta ecuación diferencial)
-MU = 1
-A = 5
+MU = 2
+A = 4
 OMEGA = 4
 
 # Función de la ecuación diferencial.
@@ -94,10 +94,16 @@ def funcion_color(t, x, y, dx, dy):
 # y más lento se vuelve el programa. 
 DURACION = 30
 
-#Cuántos puntos se hacen por segundo (el rastro es en realidad una lineal a trozos)
+# Cuántos puntos se hacen por segundo (el rastro es en realidad una lineal a trozos)
 PUNTOS_POR_SEG = 100
 
 
+################
+#### CICLOS ####
+################
+
+# Separación entre puntos de la discretización
+EPSILON = 0.1
 
 
 #Método numérico a usar para resolver.
