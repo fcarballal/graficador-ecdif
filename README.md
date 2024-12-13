@@ -28,3 +28,4 @@ CONTROLES:
 - click botón principal del mouse : agregar una solución nueva en ese punto
 - dígitos del 1 al 9 : cambiar el color de las soluciones agregadas
 - tecla "l" : activar o desactivar rastros (solo se puede activar en pausa)
+- tecla "k" : evolucionar ciclo. Solo se puede activar estando en pausa. Luego se hace click, se dibuja una curva cerrada con el mouse (el primer y último punto se unen solos) y esa ciclo se evoluciona. Al volver a presionar k se elimina el ciclo
