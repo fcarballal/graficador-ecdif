@@ -26,4 +26,5 @@ CONTROLES:
 - scroll del mouse : alejar o acercar
 - tecla "c" : centrar y volver a la escala inicial
 - click botón principal del mouse : agregar una solución nueva en ese punto
-- dígitos del 1 al 9 : cambiar el color de las soluciones agregadas 
+- dígitos del 1 al 9 : cambiar el color de las soluciones agregadas
+- tecla "l" : activar o desactivar rastros (solo se puede activar en pausa)
