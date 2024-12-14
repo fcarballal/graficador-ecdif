@@ -10,11 +10,11 @@ O alternativamente:
 pip install numpy, scipy, PyOpenGL, glfw
 
 
+Se ejecuta el archivo sols2D.py
 
+En el archivo sols2DParams.py se puede modificar la ecuación diferencial, las condiciones iniciales, cómo se pinta el fondo y otros parámetros.
 
-Se ejecuta el archivo flujo2D.py
-
-En el archivo flujo2DParams.py se puede modificar la ecuación diferencial, las condiciones iniciales, cómo se pinta el fondo y otros parámetros.
+En el archivo sols2DMetNum.py está la parte de métodos numéricos para ecuaciones diferenciales.
 
 CONTROLES:
 
