@@ -34,7 +34,7 @@ def triangulito(x, y, delta):
     return np.array((x - delta, y - delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO,
                      x + delta, y - delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO,
                      x, y + delta, 0.0, ATENUACION_FONDO, ATENUACION_FONDO, ATENUACION_FONDO),
-                     dtype = np.float32)
+                     dtype = np.float32) 
 
 def circulo(xc, yc, r, rojo, verde, azul, disc_circ):
     grilla = np.linspace(0, 2*np.pi, disc_circ)
