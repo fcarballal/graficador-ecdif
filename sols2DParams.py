@@ -30,6 +30,7 @@ def posiciones_iniciales():
 MU = 2
 A = 4
 OMEGA = 4
+#return  y, MU*(1-x*x)*y - x + A*np.sin(OMEGA*t)
 
 # Función de la ecuación diferencial.
 # Lo que se retorna son x' e y' en ese orden, es decir, cuando dice "return dx, dy", significa que dx es x', y que dy es y'.
@@ -38,7 +39,7 @@ OMEGA = 4
 # Por ejemplo, para seno se debe usar np.sin(), para exponencial np.exp(), etc.
 # Recordar que en python la exponencial es a**b.
 def ec_dif(t,x,y):
-    return  y, MU*(1-x*x)*y - x + A*np.sin(OMEGA*t)
+    return  y, -np.sin(x)
 
 
 ################
